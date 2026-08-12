@@ -1,6 +1,7 @@
 {
   "name": "lavadero-backend",
   "version": "1.0.0",
+  "type": "module",
   "description": "API para agenda de lavado de coches",
   "main": "dist/index.js",
   "scripts": {
