@@ -9,6 +9,7 @@ import horarioRoutes from './routes/horarioRoutes';
 import limiteRoutes from './routes/limiteRoutes';
 import { iniciarCronJobs } from './services/cronService';
 
+
 dotenv.config();
 
 const app = express();
