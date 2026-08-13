@@ -7,8 +7,6 @@ import citaRoutes from './routes/citaRoutes';
 import vehiculoRoutes from './routes/vehiculoRoutes';
 import horarioRoutes from './routes/horarioRoutes';
 import limiteRoutes from './routes/limiteRoutes';
-import { iniciarCronJobs } from './services/cronService';
-
 
 dotenv.config();
 
@@ -18,7 +16,6 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/servicios', servicioRoutes);
 app.use('/api/citas', citaRoutes);
@@ -32,6 +29,4 @@ app.get('/api/health', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-  // ✅ Iniciar cron jobs
-  iniciarCronJobs();
 });

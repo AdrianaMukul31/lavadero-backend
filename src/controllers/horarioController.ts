@@ -17,7 +17,7 @@ export const getHorarios = async (req: Request, res: Response) => {
 };
 
 // ==========================================
-// ACTUALIZAR UN HORARIO
+// ACTUALIZAR UN HORARIO (CON VALIDACIÓN DE UUID)
 // ==========================================
 export const updateHorario = async (req: Request, res: Response) => {
   try {
@@ -71,7 +71,7 @@ export const updateHorario = async (req: Request, res: Response) => {
 };
 
 // ==========================================
-// ACTUALIZAR TODOS LOS HORARIOS
+// ACTUALIZAR TODOS LOS HORARIOS DE UNA VEZ
 // ==========================================
 export const updateAllHorarios = async (req: Request, res: Response) => {
   try {
@@ -81,26 +81,17 @@ export const updateAllHorarios = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Se requiere un array de días' });
     }
 
-    // Validar datos
-    for (const dia of dias) {
-      if (dia.dia_semana === undefined || dia.activo === undefined) {
-        return res.status(400).json({
-          error: 'Datos incompletos. Cada día debe tener dia_semana y activo'
-        });
-      }
-    }
-
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
       for (const dia of dias) {
         await client.query(
-          `UPDATE horarios
-           SET activo = $1,
-               hora_apertura = $2,
-               hora_cierre = $3,
-               intervalo_minutos = $4,
+          `UPDATE horarios 
+           SET activo = $1, 
+               hora_apertura = $2, 
+               hora_cierre = $3, 
+               intervalo_minutos = $4, 
                updated_at = CURRENT_TIMESTAMP
            WHERE dia_semana = $5`,
           [dia.activo, dia.hora_apertura, dia.hora_cierre, dia.intervalo_minutos || 30, dia.dia_semana]
@@ -108,7 +99,7 @@ export const updateAllHorarios = async (req: Request, res: Response) => {
       }
 
       await client.query('COMMIT');
-
+      
       const result = await pool.query('SELECT * FROM horarios ORDER BY dia_semana');
       res.json(result.rows);
     } catch (error) {
@@ -210,7 +201,7 @@ export const getHorariosDisponibles = async (req: Request, res: Response) => {
     }
 
     const horario = horarioResult.rows[0];
-
+    
     const horasDisponibles = [];
     const apertura = horario.hora_apertura;
     const cierre = horario.hora_cierre;
@@ -228,11 +219,11 @@ export const getHorariosDisponibles = async (req: Request, res: Response) => {
 
     while (horaActual < horaCierre) {
       const horaStr = horaActual.toTimeString().slice(0, 5);
-
+      
       if (!horasOcupadas.includes(horaStr)) {
         horasDisponibles.push(horaStr);
       }
-
+      
       horaActual = new Date(horaActual.getTime() + intervalo * 60000);
     }
 
@@ -247,7 +238,7 @@ export const getHorariosDisponibles = async (req: Request, res: Response) => {
 };
 
 // ==========================================
-// OBTENER DÍAS DISPONIBLES DEL MES
+// OBTENER DÍAS DISPONIBLES DEL MES (CORREGIDO)
 // ==========================================
 export const getDiasDisponibles = async (req: Request, res: Response) => {
   try {
@@ -260,19 +251,22 @@ export const getDiasDisponibles = async (req: Request, res: Response) => {
     const añoNum = parseInt(año as string);
     const mesNum = parseInt(mes as string);
 
+    // Obtener todos los horarios activos
     const horarios = await pool.query(
       'SELECT dia_semana, hora_apertura, hora_cierre FROM horarios WHERE activo = true'
     );
 
-    const diasActivos = horarios.rows.map(h => h.dia_semana);
+    const diasActivos = horarios.rows.map((h) => h.dia_semana);
 
+    // Obtener días festivos del mes
     const festivos = await pool.query(
-      `SELECT fecha FROM dias_festivos
+      `SELECT fecha FROM dias_festivos 
        WHERE EXTRACT(YEAR FROM fecha) = $1 AND EXTRACT(MONTH FROM fecha) = $2`,
       [añoNum, mesNum]
     );
 
-    const fechasFestivas = festivos.rows.map(f => f.fecha.toISOString().split('T')[0]);
+    // ✅ Variable `f` = cada fila de festivos
+    const fechasFestivas = festivos.rows.map((f) => f.fecha.toISOString().split('T')[0]);
 
     const diasDisponibles = [];
     const diasEnMes = new Date(añoNum, mesNum, 0).getDate();
@@ -283,8 +277,9 @@ export const getDiasDisponibles = async (req: Request, res: Response) => {
       const fechaStr = fecha.toISOString().split('T')[0];
 
       if (diasActivos.includes(diaSemana) && !fechasFestivas.includes(fechaStr)) {
-        const horarioDia = horarios.rows.find(h => h.dia_semana === diaSemana);
-
+        // ✅ Variable `h` = cada fila de horarios
+        const horarioDia = horarios.rows.find((h) => h.dia_semana === diaSemana);
+        
         if (horarioDia) {
           const horasDisponibles = [];
           let horaActual = new Date(`2000-01-01T${horarioDia.hora_apertura}`);
@@ -296,13 +291,13 @@ export const getDiasDisponibles = async (req: Request, res: Response) => {
           }
 
           const citasOcupadas = await pool.query(
-            `SELECT hora FROM citas
+            `SELECT hora FROM citas 
              WHERE fecha = $1 AND estado NOT IN ('cancelada', 'terminada')`,
             [fechaStr]
           );
 
-          const horasOcupadas = citasOcupadas.rows.map(row => row.hora);
-          const horasLibres = horasDisponibles.filter(h => !horasOcupadas.includes(h));
+          const horasOcupadas = citasOcupadas.rows.map((row) => row.hora);
+          const horasLibres = horasDisponibles.filter((hora) => !horasOcupadas.includes(hora));
 
           diasDisponibles.push({
             fecha: fechaStr,
