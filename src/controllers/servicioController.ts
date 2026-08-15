@@ -113,3 +113,16 @@ export const deleteServicio = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Error al eliminar servicio' });
   }
 };
+
+// ==========================================
+// 🔥 NUEVO: OBTENER SERVICIOS PÚBLICOS (SIN AUTENTICACIÓN)
+// ==========================================
+export const getServiciosPublic = async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query('SELECT * FROM servicios ORDER BY created_at DESC');
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al obtener servicios públicos' });
+  }
+};
